@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#166534">
+<title>আমাদের বাজার হিসাব</title>
+<style>
+:root{--green:#166534;--light:#f0fdf4;--border:#d1d5db;--ink:#17211b;--muted:#647067;--red:#b91c1c}
+*{box-sizing:border-box}body{margin:0;background:#f6f8f6;color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Bengali",sans-serif}
+header{background:var(--green);color:white;padding:22px 16px 18px}header h1{margin:0;font-size:25px}header p{margin:6px 0 0;opacity:.9;font-size:14px}
+.hdr-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.auth-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+.sync-pill{background:rgba(255,255,255,.16);padding:5px 10px;border-radius:999px;font-size:12px}
+.btn-logout{background:rgba(255,255,255,.18);color:white;padding:7px 12px;font-size:13px}
+main{max-width:850px;margin:0 auto;padding:14px;display:grid;gap:14px}
+.card{background:white;border:1px solid #e1e7e1;border-radius:16px;padding:16px;box-shadow:0 2px 7px #00000008}
+h2{font-size:18px;margin:0 0 12px}label{display:block;font-size:14px;margin:10px 0 5px;color:#37443a}
+input,select,button{font:inherit}input,select{width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;background:white;color:var(--ink)}
+button{border:0;border-radius:10px;padding:11px 14px;cursor:pointer;font-weight:650}
+.primary{background:var(--green);color:white}.secondary{background:#e8f5eb;color:var(--green)}.danger{background:#fee2e2;color:var(--red);padding:7px 9px;font-size:13px}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.small{font-size:13px;color:var(--muted)}.members{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.chip{background:var(--light);border:1px solid #bbf7d0;border-radius:999px;padding:6px 10px;font-size:13px;display:flex;gap:7px;align-items:center}
+.chip button{padding:0;background:none;color:var(--red);font-size:16px}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:8px;margin-top:8px}
+.check{display:flex;gap:7px;align-items:center;border:1px solid var(--border);padding:8px;border-radius:9px;margin:0}.check input{width:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px}
+.stat{background:var(--light);border-radius:12px;padding:12px}.stat b{display:block;font-size:21px;color:var(--green);margin-top:4px}
+.tablewrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:9px;border-bottom:1px solid #e5e7eb;vertical-align:top}th{color:#526056;font-weight:650}
+.balance{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #e5e7eb}.good{color:var(--green)}.bad{color:var(--red)}
+.notice{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px;font-size:13px;line-height:1.5}
+.err-text{color:var(--red);font-size:13px;margin-top:8px;min-height:18px}
+.login-wrap{max-width:440px;margin:28px auto;padding:0 14px}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 24px}
+@media(min-width:760px){main{grid-template-columns:1fr 1fr}main .wide{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header>
+  <div class="hdr-row" style="max-width:850px;margin:0 auto">
+    <div>
+      <h1>🧾 আমাদের বাজার হিসাব</h1>
+      <p>বাজারের খরচ যোগ করুন, খাওয়ার দিন অনুযায়ী ভাগ করুন, মাসের হিসাব দেখুন।</p>
+    </div>
+    <div id="authBar" class="auth-bar" style="display:none">
+      <span id="syncStatus" class="sync-pill">ক্লাউড সিঙ্ক হচ্ছে...</span>
+      <span id="userEmail" class="small" style="color:#dcfce7"></span>
+      <button id="logoutBtn" class="btn-logout">লগ-আউট</button>
+    </div>
+  </div>
+</header>
+
+<div id="loginView" class="login-wrap">
+  <section class="card">
+    <h2>🔐 অ্যাকাউন্টে লগ-ইন করুন</h2>
+    <p class="small">Firebase-এ তৈরি করা আপনার ইমেইল ও পাসওয়ার্ড দিয়ে লগ-ইন করুন।</p>
+    <label for="loginEmail">ইমেইল</label>
+    <input id="loginEmail" type="email" autocomplete="email" placeholder="example@mail.com">
+    <label for="loginPass">পাসওয়ার্ড</label>
+    <input id="loginPass" type="password" autocomplete="current-password" placeholder="পাসওয়ার্ড লিখুন">
+    <button id="loginBtn" class="primary" style="width:100%;margin-top:14px">লগ-ইন করুন</button>
+    <div id="loginError" class="err-text"></div>
+  </section>
+</div>
+
+<main id="appView" style="display:none">
+<section class="card">
+<h2>১. সদস্য যোগ করুন</h2>
+<div class="row"><input id="memberName" placeholder="সদস্যের নাম লিখুন"><button class="primary" id="addMember">যোগ করুন</button></div>
+<div id="members" class="members"></div>
+<p class="small">সদস্যের সংখ্যা নির্দিষ্ট নয়—প্রয়োজনমতো যোগ করতে পারবেন।</p>
+</section>
+
+<section class="card">
+<h2>২. বাজারের খরচ যোগ করুন</h2>
+<label for="date">তারিখ</label><input id="date" type="date">
+<label for="payer">কে বাজার করেছে?</label><select id="payer"></select>
+<div class="row">
+<div><label for="amount">টাকার পরিমাণ (QAR)</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="যেমন 25"></div>
+<div><label for="note">বিবরণ (ঐচ্ছিক)</label><input id="note" placeholder="যেমন চাল, ডাল"></div>
+</div>
+<label>সেদিন কারা একসঙ্গে খেয়েছে?</label><div id="eaters" class="checks"></div>
+<button class="primary" id="addExpense" style="width:100%;margin-top:14px">খরচ যোগ করুন</button>
+<p class="small">খরচ সমানভাবে শুধু নির্বাচিত খাওয়া সদস্যদের মধ্যে ভাগ হবে।</p>
+</section>
+
+<section class="card wide">
+<h2>৩. মাসের হিসাব</h2>
+<label for="month">মাস নির্বাচন করুন</label><input id="month" type="month">
+<div class="stats" id="stats" style="margin-top:12px"></div>
+<div id="balances" style="margin-top:12px"></div>
+<h3 style="font-size:15px;margin:16px 0 8px">কে কাকে কত টাকা দেবে?</h3><div id="settlements"></div>
+</section>
+
+<section class="card wide">
+<h2>৪. খরচের তালিকা</h2><div class="tablewrap" id="history"></div>
+<div class="row" style="margin-top:12px"><button class="secondary" id="export">ব্যাকআপ ডাউনলোড</button><label class="secondary" style="text-align:center;padding:11px;border-radius:10px;cursor:pointer">ব্যাকআপ ফিরিয়ে আনুন<input type="file" id="import" accept="application/json" hidden></label></div>
+</section>
+
+<section class="card wide">
+<h2>ক্লাউড সিঙ্ক তথ্য</h2>
+<div class="notice">আপনার হিসাবের তথ্য এখন Firebase Firestore-এর সাথে যুক্ত। লগ-ইন করা সদস্যদের ডিভাইস থেকে যোগ বা মুছে ফেলা হিসাব স্বয়ংক্রিয়ভাবে আপডেট হবে। পাশাপাশি যেকোনো সময় JSON ব্যাকআপ ডাউনলোড করে রাখতে পারবেন।</div>
+</section>
+</main>
+
+<footer>Firebase Cloud Sync • গুরুত্বপূর্ণ হিসাবের জন্য নিয়মিত ব্যাকআপ ডাউনলোড করুন</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBjHbIx91Pb48WQmUsGgD2v8RYV0S-onJ0",
+  authDomain: "amader-bazar-hisab-14fcc.firebaseapp.com",
+  projectId: "amader-bazar-hisab-14fcc",
+  storageBucket: "amader-bazar-hisab-14fcc.firebasestorage.app",
+  messagingSenderId: "844001776979",
+  appId: "1:844001776979:web:a672797639d14001e1bda6",
+  measurementId: "G-9K1Q59590X"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Shared Firestore document for all authorized members
+const HISAB_DOC_REF = doc(db, "bazarHisabShared", "mainBook");
+
+const $ = id => document.getElementById(id);
+let data = { members: [], expenses: [] };
+let unsubscribeDoc = null;
+let isApplyingRemote = false;
+
+const today = new Date();
+$('date').value = today.toISOString().slice(0, 10);
+$('month').value = today.toISOString().slice(0, 7);
+
+function money(n) {
+  return 'QAR ' + (Number(n) || 0).toFixed(2);
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function name(id) {
+  return esc(data.members.find(m => m.id === id)?.name || 'মুছে ফেলা সদস্য');
+}
+
+function setSyncStatus(text) {
+  if ($('syncStatus')) $('syncStatus').textContent = text;
+}
+
+function readLocalBackupIfAny() {
+  try {
+    const old = localStorage.getItem('amaderBazarHisab');
+    if (old) {
+      const d = JSON.parse(old);
+      if (Array.isArray(d.members) && Array.isArray(d.expenses)) {
+        return { members: d.members, expenses: d.expenses };
+      }
+    }
+  } catch {}
+  return null;
+}
+
+async function save() {
+  localStorage.setItem('amaderBazarHisab', JSON.stringify(data));
+  render();
+  if (!auth.currentUser || isApplyingRemote) return;
+  try {
+    setSyncStatus('সেভ হচ্ছে...');
+    await setDoc(HISAB_DOC_REF, {
+      members: data.members,
+      expenses: data.expenses,
+      updatedAt: new Date().toISOString(),
+      updatedBy: auth.currentUser.email || ''
+    }, { merge: true });
+    setSyncStatus('সিঙ্ক সম্পন্ন ✓');
+  } catch (err) {
+    console.error(err);
+    setSyncStatus('সিঙ্ক ত্রুটি!');
+    alert('ক্লাউডে সেভ করতে সমস্যা হয়েছে। Firestore রুলস ও ইন্টারনেট সংযোগ পরীক্ষা করুন।');
+  }
+}
+
+function render() {
+  $('members').innerHTML = data.members.map(m =>
+    `<span class="chip">${esc(m.name)} <button title="সদস্য মুছুন" data-del-member="${esc(m.id)}">×</button></span>`
+  ).join('') || '<span class="small">এখনো সদস্য যোগ করা হয়নি।</span>';
+
+  const opts = data.members.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('');
+  $('payer').innerHTML = opts || '<option value="">আগে সদস্য যোগ করুন</option>';
+
+  $('eaters').innerHTML = data.members.map(m =>
+    `<label class="check"><input type="checkbox" value="${esc(m.id)}" class="eater"> ${esc(m.name)}</label>`
+  ).join('') || '<span class="small">আগে সদস্য যোগ করুন।</span>';
+
+  const month = $('month').value;
+  const exps = data.expenses.filter(e => String(e.date || '').slice(0, 7) === month);
+
+  let totals = {}, shares = {}, paid = {};
+  data.members.forEach(m => { totals[m.id] = 0; shares[m.id] = 0; paid[m.id] = 0; });
+
+  let total = 0;
+  exps.forEach(e => {
+    const amt = Number(e.amount) || 0;
+    total += amt;
+    paid[e.payer] = (paid[e.payer] || 0) + amt;
+    const ids = Array.isArray(e.eaters) ? e.eaters : [];
+    if (ids.length) {
+      ids.forEach(id => { shares[id] = (shares[id] || 0) + (amt / ids.length); });
+    }
+  });
+
+  data.members.forEach(m => {
+    totals[m.id] = (paid[m.id] || 0) - (shares[m.id] || 0);
+  });
+
+  $('stats').innerHTML =
+    `<div class="stat"><span class="small">মোট বাজার খরচ</span><b>${money(total)}</b></div>` +
+    `<div class="stat"><span class="small">এই মাসে বাজার</span><b>${exps.length} বার</b></div>` +
+    `<div class="stat"><span class="small">সদস্য</span><b>${data.members.length} জন</b></div>`;
+
+  $('balances').innerHTML = data.members.map(m => {
+    const b = totals[m.id] || 0;
+    return `<div class="balance"><span>${esc(m.name)}<br><span class="small">দিয়েছেন ${money(paid[m.id] || 0)} · ভাগ ${money(shares[m.id] || 0)}</span></span><b class="${b >= 0 ? 'good' : 'bad'}">${b >= 0 ? 'পাবেন ' : 'দেবেন '}${money(Math.abs(b))}</b></div>`;
+  }).join('') || '<p class="small">হিসাব দেখার জন্য সদস্য যোগ করুন।</p>';
+
+  let creditors = data.members.map(m => ({ id: m.id, name: m.name, amt: totals[m.id] || 0 })).filter(x => x.amt > 0.005).map(x => ({ ...x }));
+  let debtors = data.members.map(m => ({ id: m.id, name: m.name, amt: -(totals[m.id] || 0) })).filter(x => x.amt > 0.005);
+  let tx = [];
+  let i = 0, j = 0;
+  while (i < debtors.length && j < creditors.length) {
+    let a = Math.min(debtors[i].amt, creditors[j].amt);
+    if (a > 0.005) tx.push(`${esc(debtors[i].name)} → ${esc(creditors[j].name)}: <b>${money(a)}</b>`);
+    debtors[i].amt -= a;
+    creditors[j].amt -= a;
+    if (debtors[i].amt < 0.005) i++;
+    if (creditors[j].amt < 0.005) j++;
+  }
+  $('settlements').innerHTML = tx.length ? tx.map(t => `<div class="balance">${t}</div>`).join('') : '<span class="small">এই মাসে টাকা দেওয়া-পাওয়ার হিসাব নেই।</span>';
+
+  const all = [...data.expenses].sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  $('history').innerHTML = all.length
+    ? `<table><thead><tr><th>তারিখ</th><th>বাজার করেছে</th><th>টাকা</th><th>খেয়েছে</th><th></th></tr></thead><tbody>${all.map(e =>
+      `<tr><td>${esc(e.date)}<br><span class="small">${esc(e.note || '')}</span></td><td>${name(e.payer)}</td><td>${money(e.amount)}</td><td>${(e.eaters || []).map(name).join(', ') || 'নির্বাচিত নয়'}</td><td><button class="danger" data-del-expense="${esc(e.id)}">মুছুন</button></td></tr>`
+    ).join('')}</tbody></table>`
+    : '<p class="small">এখনো কোনো খরচ যোগ করা হয়নি।</p>';
+}
+
+$('addMember').onclick = () => {
+  const n = $('memberName').value.trim();
+  if (!n) return;
+  if (data.members.some(m => m.name.toLowerCase() === n.toLowerCase())) {
+    alert('এই নামের সদস্য আগে থেকেই আছে।');
+    return;
+  }
+  data.members.push({ id: crypto.randomUUID(), name: n });
+  $('memberName').value = '';
+  save();
+};
+
+$('memberName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('addMember').click();
+});
+
+$('members').onclick = e => {
+  const id = e.target.dataset.delMember;
+  if (!id) return;
+  if (!confirm('সদস্যটি তালিকা থেকে মুছবেন? পুরোনো খরচের রেকর্ড থাকবে।')) return;
+  data.members = data.members.filter(m => m.id !== id);
+  save();
+};
+
+$('addExpense').onclick = () => {
+  const payer = $('payer').value;
+  const amount = Number($('amount').value);
+  const date = $('date').value;
+  const eaters = [...document.querySelectorAll('.eater:checked')].map(x => x.value);
+  if (!payer) { alert('আগে সদস্য যোগ করুন।'); return; }
+  if (!date || !Number.isFinite(amount) || amount <= 0) { alert('সঠিক তারিখ ও টাকার পরিমাণ দিন।'); return; }
+  if (!eaters.length) { alert('সেদিন যারা খেয়েছে তাদের নির্বাচন করুন।'); return; }
+  data.expenses.push({
+    id: crypto.randomUUID(),
+    date,
+    payer,
+    amount,
+    note: $('note').value.trim(),
+    eaters
+  });
+  $('amount').value = '';
+  $('note').value = '';
+  document.querySelectorAll('.eater').forEach(x => { x.checked = false; });
+  save();
+};
+
+$('history').onclick = e => {
+  const id = e.target.dataset.delExpense;
+  if (!id) return;
+  if (confirm('এই খরচ মুছে ফেলবেন?')) {
+    data.expenses = data.expenses.filter(x => x.id !== id);
+    save();
+  }
+};
+
+$('month').onchange = render;
+
+$('export').onclick = () => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'amader-bazar-backup.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+$('import').onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!Array.isArray(d.members) || !Array.isArray(d.expenses)) throw new Error('Invalid backup');
+    if (confirm('বর্তমান তথ্যের বদলে ব্যাকআপের তথ্য বসাবেন?')) {
+      data = { members: d.members, expenses: d.expenses };
+      await save();
+    }
+  } catch {
+    alert('ব্যাকআপ ফাইলটি সঠিক নয়।');
+  }
+  e.target.value = '';
+};
+
+$('loginBtn').onclick = async () => {
+  $('loginError').textContent = '';
+  const email = $('loginEmail').value.trim();
+  const pass = $('loginPass').value;
+  if (!email || !pass) {
+    $('loginError').textContent = 'ইমেইল এবং পাসওয়ার্ড দিন।';
+    return;
+  }
+  $('loginBtn').disabled = true;
+  $('loginBtn').textContent = 'লগ-ইন হচ্ছে...';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (err) {
+    $('loginError').textContent = 'লগ-ইন ব্যর্থ হয়েছে। ইমেইল বা পাসওয়ার্ড যাচাই করুন।';
+  } finally {
+    $('loginBtn').disabled = false;
+    $('loginBtn').textContent = 'লগ-ইন করুন';
+  }
+};
+
+$('logoutBtn').onclick = async () => {
+  if (unsubscribeDoc) { unsubscribeDoc(); unsubscribeDoc = null; }
+  await signOut(auth);
+};
+
+async function startRealtimeSync() {
+  if (unsubscribeDoc) { unsubscribeDoc(); unsubscribeDoc = null; }
+  setSyncStatus('ক্লাউড চেক হচ্ছে...');
+  try {
+    const snap = await getDoc(HISAB_DOC_REF);
+    if (!snap.exists()) {
+      const localBackup = readLocalBackupIfAny();
+      const initial = localBackup || { members: [], expenses: [] };
+      isApplyingRemote = true;
+      data = initial;
+      render();
+      isApplyingRemote = false;
+      await setDoc(HISAB_DOC_REF, {
+        members: initial.members,
+        expenses: initial.expenses,
+        createdAt: new Date().toISOString()
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    setSyncStatus('রুলস/সংযোগ চেক করুন');
+  }
+
+  unsubscribeDoc = onSnapshot(HISAB_DOC_REF, snap => {
+    if (!snap.exists()) return;
+    const docData = snap.data();
+    isApplyingRemote = true;
+    data = {
+      members: Array.isArray(docData.members) ? docData.members : [],
+      expenses: Array.isArray(docData.expenses) ? docData.expenses : []
+    };
+    localStorage.setItem('amaderBazarHisab', JSON.stringify(data));
+    render();
+    isApplyingRemote = false;
+    setSyncStatus('সিঙ্ক সম্পন্ন ✓');
+  }, err => {
+    console.error(err);
+    setSyncStatus('সিঙ্ক ত্রুটি!');
+  });
+}
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    $('loginView').style.display = 'none';
+    $('appView').style.display = 'grid';
+    $('authBar').style.display = 'flex';
+    $('userEmail').textContent = user.email || '';
+    startRealtimeSync();
+  } else {
+    if (unsubscribeDoc) { unsubscribeDoc(); unsubscribeDoc = null; }
+    $('appView').style.display = 'none';
+    $('authBar').style.display = 'none';
+    $('loginView').style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
