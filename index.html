@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#166534">
 <title>আমাদের বাজার হিসাব</title>
+<link rel="manifest" href="manifest.json">
 <style>
 :root{--green:#166534;--light:#f0fdf4;--border:#d1d5db;--ink:#17211b;--muted:#647067;--red:#b91c1c}
 *{box-sizing:border-box}body{margin:0;background:#f6f8f6;color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans Bengali",sans-serif}
@@ -414,6 +415,12 @@ onAuthStateChanged(auth, user => {
     $('loginView').style.display = 'block';
   }
 });
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js");
+  });
+}
 </script>
 </body>
 </html>
